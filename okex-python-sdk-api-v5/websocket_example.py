@@ -197,7 +197,10 @@ async def subscribe_without_login(url, channels):
                             print("连接关闭，正在重连……")
                             break
 
-                    print(get_timestamp() + res)
+                    s = get_timestamp() + res
+                    with open(f'../../database/dot-usdt-swap.json', 'a') as f:
+                        f.write(s+'\n')
+
                     res = eval(res)
                     if 'event' in res:
                         continue
@@ -386,7 +389,7 @@ passphrase = ""
 
 # WebSocket公共频道 public channels
 # 实盘 real trading
-# url = "wss://ws.okex.com:8443/ws/v5/public"
+url = "wss://ws.okex.com:8443/ws/v5/public"
 # 模拟盘 demo trading
 # url = "wss://ws.okex.com:8443/ws/v5/public?brokerId=9999"
 
@@ -406,9 +409,10 @@ passphrase = ""
 '''
 
 # 产品频道  Instruments Channel
-# channels = [{"channel": "instruments", "instType": "FUTURES"}]
+# channels = [{"channel": "instruments", "instType": "SWAP"}]
 # 行情频道 tickers channel
 # channels = [{"channel": "tickers", "instId": "BTC-USD-210326"}]
+channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}]
 # 持仓总量频道 Open interest Channel
 # channels = [{"channel": "open-interest", "instId": "BTC-USD-210326"}]
 # K线频道 Candlesticks Channel
@@ -419,7 +423,7 @@ passphrase = ""
 # channels = [{"channel": "estimated-price", "instType": "FUTURES", "uly": "BTC-USD"}]
 # 标记价格频道 Mark Price Channel
 # channels = [{"channel": "mark-price", "instId": "BTC-USDT-210326"}]
-# 标记价格K线频道 Mark Price Candlesticks Channel
+# 标记价格K线频道 Mark Price Candlesticks Channel0
 # channels = [{"channel": "mark-price-candle1D", "instId": "BTC-USD-201225"}]
 # 限价频道 Price Limit Channel
 # channels = [{"channel": "price-limit", "instId": "BTC-USD-201225"}]
@@ -489,7 +493,7 @@ passphrase = ""
 loop = asyncio.get_event_loop()
 
 # 公共频道 不需要登录（行情，持仓总量，K线，标记价格，深度，资金费率等）subscribe public channel
-# loop.run_until_complete(subscribe_without_login(url, channels))
+loop.run_until_complete(subscribe_without_login(url, channels))
 
 # 私有频道 需要登录（账户，持仓，订单等）subscribe private channel
 # loop.run_until_complete(subscribe(url, api_key, passphrase, secret_key, channels))
