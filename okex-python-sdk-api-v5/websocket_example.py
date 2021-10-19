@@ -197,13 +197,19 @@ async def subscribe_without_login(url, channels):
                             print("连接关闭，正在重连……")
                             break
 
-                    s = get_timestamp() + res
-                    with open(f'../../database/dot-usdt-swap.json', 'a') as f:
-                        f.write(s+'\n')
-
                     res = eval(res)
                     if 'event' in res:
                         continue
+
+                    # 保存数据
+                    s = get_timestamp() + json.dumps(res)
+                    if res['arg']['channel'] == 'tickers' and res['arg']['instId'] == 'DOT-USDT-SWAP':
+                        with open(f'../../database/2021-10-18/dot-usdt-swap-2.json', 'a') as f:
+                            f.write(s+'\n')
+                    if res['arg']['channel'] == 'tickers' and res['arg']['instId'] == 'SLP-USDT-SWAP':
+                        with open(f'../../database/2021-10-18/slp-usdt-swap-1.json', 'a') as f:
+                            f.write(s+'\n')
+                    
                     for i in res['arg']:
                         if 'books' in res['arg'][i] and 'books5' not in res['arg'][i]:
                             # 订阅频道是深度频道
@@ -412,7 +418,7 @@ url = "wss://ws.okex.com:8443/ws/v5/public"
 # channels = [{"channel": "instruments", "instType": "SWAP"}]
 # 行情频道 tickers channel
 # channels = [{"channel": "tickers", "instId": "BTC-USD-210326"}]
-channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}]
+channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}, {"channel": "tickers", "instId": "SLP-USDT-SWAP"}]
 # 持仓总量频道 Open interest Channel
 # channels = [{"channel": "open-interest", "instId": "BTC-USD-210326"}]
 # K线频道 Candlesticks Channel
