@@ -24,7 +24,7 @@ import os,time
 
 market_crawlingPath = os.path.join('..','..','database','market_crawling')
 compressFilePath = os.path.join('..','..','database','compressFiles')
-
+cnt = 0
 while True:
 	for root, dirs, files in os.walk(market_crawlingPath):
 		# 批量创建各币种文件夹
@@ -49,4 +49,6 @@ while True:
 				os.system(f'mv {crawFilePath} {compressDir}')
 				os.system(f'gzip -9 -c {compressFile} > {compressFile}.gz')
 				os.system(f'rm {compressFile}')
-	time.sleep(1)
+	time.sleep(5)
+	cnt += 1
+	print(f'scan cnt={cnt}')
