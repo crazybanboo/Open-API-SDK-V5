@@ -8,6 +8,7 @@ import zlib
 
 import requests
 import websockets
+import os
 
 
 def get_timestamp():
@@ -172,10 +173,60 @@ def change(num_old):
         out = num_old
     return out
 
+def file_size(file:str)->int:
+    return os.stat(file).st_size
+
+class file_manager():
+    def __init__(self, channels:list) -> None:
+        self.channels:list = channels
+        self.base_dir:str = '../../database/market_crawling'
+        self.count_dict:dict = {} #用于指示当前标的的存储文件从多少开始
+
+        if not os.path.exists(self.base_dir):
+            os.mkdir(self.base_dir)
+
+        for root,dirs,files in os.walk(self.base_dir):
+            for c in self.channels:
+                inst_id = c['instId']
+                if root.endswith(inst_id):
+                    count = 0
+                    for f in files:
+                        l = list(filter(str.isdigit, f))
+                        n = int(''.join(l)) #获取到文件的序列号
+                        count = n if n > count else count
+                    self.count_dict[inst_id] = count
+            
+    def save_json(self, dic:dict, save_string:str):
+        for c in self.channels:
+            channel:str = c['channel']
+            inst_id:str = c['instId']
+            if dic['data'][0]['instId'] == inst_id:
+                inst_dir = os.path.join(self.base_dir, inst_id)
+                if not os.path.exists(inst_dir): # 如果没有该标的的文件夹，则创建一个
+                    os.mkdir(inst_dir)
+
+                # 判断数据库里是否已经有该文件，如果有，就追加，没有就从0开始
+                # ../../database/market_crawling/DOT-USDT-SWAP/DOT-USDT-SWAP-0.json
+                file = ''
+                if inst_id in self.count_dict:
+                    file = f'{inst_dir}/{inst_id}-{self.count_dict[inst_id]}.json'
+                    # print(f'file:{file}')
+                    if file_size(file) > 1024*1024*100:
+                        self.count_dict[inst_id] = self.count_dict[inst_id] + 1
+                        file = f'{inst_dir}/{inst_id}-{self.count_dict[inst_id]}.json' # 更新文件名
+                else:
+                    self.count_dict[inst_id] = 0
+                    file = f'{inst_dir}/{inst_id}-{self.count_dict[inst_id]}.json'
+                    
+                with open(file, 'a') as f:
+                    f.write(save_string+'\n')
+                break
+
 
 # subscribe channels un_need login
 async def subscribe_without_login(url, channels):
     l = []
+    fm = file_manager(channels)
     while True:
         try:
             async with websockets.connect(url) as ws:
@@ -201,15 +252,6 @@ async def subscribe_without_login(url, channels):
                     if 'event' in res:
                         continue
 
-                    # 保存数据
-                    s = get_timestamp() + json.dumps(res)
-                    if res['arg']['channel'] == 'tickers' and res['arg']['instId'] == 'DOT-USDT-SWAP':
-                        with open(f'../../database/2021-10-18/dot-usdt-swap-2.json', 'a') as f:
-                            f.write(s+'\n')
-                    if res['arg']['channel'] == 'tickers' and res['arg']['instId'] == 'SLP-USDT-SWAP':
-                        with open(f'../../database/2021-10-18/slp-usdt-swap-1.json', 'a') as f:
-                            f.write(s+'\n')
-                    
                     for i in res['arg']:
                         if 'books' in res['arg'][i] and 'books5' not in res['arg'][i]:
                             # 订阅频道是深度频道
@@ -272,6 +314,14 @@ async def subscribe_without_login(url, channels):
                                                 sub_str = json.dumps(sub_param)
                                                 await ws.send(sub_str)
                                                 print(f"send: {sub_str}")
+
+                    # 保存数据
+                    try:
+                        del res['arg'] #节省空间
+                        fm.save_json(res, json.dumps(res))
+                    except Exception as e:
+                        print(f'e:{e}')
+                    
         except Exception as e:
             print("连接断开，正在重连……")
             continue
@@ -418,7 +468,8 @@ url = "wss://ws.okex.com:8443/ws/v5/public"
 # channels = [{"channel": "instruments", "instType": "SWAP"}]
 # 行情频道 tickers channel
 # channels = [{"channel": "tickers", "instId": "BTC-USD-210326"}]
-channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}, {"channel": "tickers", "instId": "SLP-USDT-SWAP"}]
+# channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}, 
+#             {"channel": "tickers", "instId": "SLP-USDT-SWAP"}]
 # 持仓总量频道 Open interest Channel
 # channels = [{"channel": "open-interest", "instId": "BTC-USD-210326"}]
 # K线频道 Candlesticks Channel
@@ -497,6 +548,44 @@ channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}, {"channel": "tick
 
 
 loop = asyncio.get_event_loop()
+
+channels = [{"channel": "tickers", "instId": "DOT-USDT-SWAP"}, 
+            {"channel": "tickers", "instId": "SLP-USDT-SWAP"},
+            {"channel": "tickers", "instId": "ATOM-USDT-SWAP"},
+            {"channel": "tickers", "instId": "LINK-USDT-SWAP"},
+            {"channel": "tickers", "instId": "ADA-USDT-SWAP"},
+            {"channel": "tickers", "instId": "SHIB-USDT-SWAP"},
+            {"channel": "tickers", "instId": "DASH-USDT-SWAP"},
+            {"channel": "tickers", "instId": "ETC-USDT-SWAP"},
+            {"channel": "tickers", "instId": "SUSHI-USDT-SWAP"},
+            {"channel": "tickers", "instId": "STORJ-USDT-SWAP"},
+            {"channel": "tickers", "instId": "BTC-USDT-SWAP"},
+            {"channel": "tickers", "instId": "NEO-USDT-SWAP"},
+            {"channel": "tickers", "instId": "AVAX-USDT-SWAP"},
+            {"channel": "tickers", "instId": "DOGE-USDT-SWAP"},
+            {"channel": "tickers", "instId": "FIL-USDT-SWAP"},
+            {"channel": "tickers", "instId": "ETH-USDT-SWAP"},
+            {"channel": "tickers", "instId": "FLM-USDT-SWAP"},
+            {"channel": "tickers", "instId": "EFI-USDT-SWAP"},
+            {"channel": "tickers", "instId": "YGG-USDT-SWAP"},
+            {"channel": "tickers", "instId": "AAVE-USDT-SWAP"},
+            {"channel": "tickers", "instId": "LUNA-USDT-SWAP"},
+            {"channel": "tickers", "instId": "SAND-USDT-SWAP"},
+            {"channel": "tickers", "instId": "MANA-USDT-SWAP"},
+            {"channel": "tickers", "instId": "ICP-USDT-SWAP"},
+            {"channel": "tickers", "instId": "QTUM-USDT-SWAP"},
+            {"channel": "tickers", "instId": "SOL-USDT-SWAP"},
+            {"channel": "tickers", "instId": "FTM-USDT-SWAP"},
+]
+# channels = []
+# with open('../../database/产品频道_swap.json', 'r') as f:
+#     res = f.read()
+#     res = eval(res)
+#     for data in res['data']:
+#         s:str = data['instId'] if 'instId' in data else ''
+#         if s.endswith('USDT-SWAP'):
+#             channels.append({'channel':'tickers', 'instId':s})
+
 
 # 公共频道 不需要登录（行情，持仓总量，K线，标记价格，深度，资金费率等）subscribe public channel
 loop.run_until_complete(subscribe_without_login(url, channels))
